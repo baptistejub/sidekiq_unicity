@@ -14,10 +14,10 @@ module SidekiqUnicity
       def for_client? = false
       def for_server? = true
 
-      def with_server_lock(job)
+      def with_server_lock(job, lock_manager)
         key = build_lock_key('during', job)
 
-        Locks.with_lock(key, @lock_ttl) do |locked|
+        lock_manager.with_lock(key, @lock_ttl) do |locked|
           if locked
             yield
           else

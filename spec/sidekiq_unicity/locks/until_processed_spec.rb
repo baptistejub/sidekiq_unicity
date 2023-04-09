@@ -3,11 +3,12 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
 
   let(:conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
   let(:lock_instance) { described_class.new(lock_key_proc: ->(args) { args.first }, lock_ttl: 300000, conflict_strategy:) }
+  let(:lock_manager) { SidekiqUnicity::Locks::Manager.new(Sidekiq.redis_pool) }
 
   describe '#with_client_lock' do
     before { allow(conflict_strategy).to receive(:call).and_call_original }
 
-    subject { lock_instance.with_client_lock(job) { 'processed' } }
+    subject { lock_instance.with_client_lock(job, lock_manager) { 'processed' } }
 
     let(:job) do
       {
@@ -27,7 +28,7 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
     end
 
     context 'with an already locked job' do
-      before { lock_instance.with_client_lock(job.dup) {} }
+      before { lock_instance.with_client_lock(job.dup, lock_manager) {} }
 
       it 'rejects the job' do
         expect(subject).to be false
@@ -38,7 +39,7 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
     context 'with another job lock key' do
       before do
         other_job = job.dup.tap { _1['args'] = [2, 'arg', true ] }
-        lock_instance.with_client_lock(other_job) {}
+        lock_instance.with_client_lock(other_job, lock_manager) {}
       end
 
       it 'processes the job' do
@@ -49,9 +50,9 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
   end
 
   describe '#with_server_lock' do
-    before { allow(SidekiqUnicity::Locks).to receive(:unlock_job).and_call_original }
+    before { allow(lock_manager).to receive(:unlock_job).and_call_original }
 
-    subject { lock_instance.with_server_lock(job) { 'processed' } }
+    subject { lock_instance.with_server_lock(job, lock_manager) { 'processed' } }
 
     let(:job) do
       {
@@ -66,7 +67,7 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
     context 'without lock info' do
       it 'tries to unlock without failing' do
         expect(subject).to eq('processed')
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
+        expect(lock_manager).to have_received(:unlock_job).once
       end
     end
 
@@ -84,18 +85,18 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
 
       it 'tries to unlock without failing' do
         expect(subject).to eq('processed')
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
+        expect(lock_manager).to have_received(:unlock_job).once
       end
     end
 
     context 'with valid lock info' do
-      before { lock_instance.with_client_lock(job) {} }
+      before { lock_instance.with_client_lock(job, lock_manager) {} }
 
       it 'unlocks the job' do
         expect(job).to have_key(SidekiqUnicity::JOB_KWARG_NAME)
         expect(subject).to eq('processed')
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
-        expect(SidekiqUnicity.lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME])).to be false
+        expect(lock_manager).to have_received(:unlock_job).once
+        expect(lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME])).to be false
       end
     end
   end

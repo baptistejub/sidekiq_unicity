@@ -11,12 +11,13 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
       client_conflict_strategy:,
       server_conflict_strategy:
     )
-    end
+  end
+  let(:lock_manager) { SidekiqUnicity::Locks::Manager.new(Sidekiq.redis_pool) }
 
   describe '#with_client_lock' do
     before { allow(client_conflict_strategy).to receive(:call).and_call_original }
 
-    subject { lock_instance.with_client_lock(job) { 'processed' } }
+    subject { lock_instance.with_client_lock(job, lock_manager) { 'processed' } }
 
     let(:job) do
       {
@@ -36,7 +37,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
     end
 
     context 'with an already locked job' do
-      before { lock_instance.with_client_lock(job.dup) {} }
+      before { lock_instance.with_client_lock(job.dup, lock_manager) {} }
 
       it 'rejects the job' do
         expect(subject).to be false
@@ -47,7 +48,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
     context 'with another job lock key' do
       before do
         other_job = job.dup.tap { _1['args'] = [2, 'arg', true ] }
-        lock_instance.with_client_lock(other_job) {}
+        lock_instance.with_client_lock(other_job, lock_manager) {}
       end
 
       it 'processes the job' do
@@ -57,7 +58,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
     end
 
     context 'with the job locked for processing' do
-      before { lock_instance.with_server_lock(job) {} }
+      before { lock_instance.with_server_lock(job, lock_manager) {} }
 
       it 'enqueues the job' do
         expect(subject).to eq('processed')
@@ -69,10 +70,12 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
   describe '#with_server_lock' do
     before do
       allow(server_conflict_strategy).to receive(:call).and_call_original
-      allow(SidekiqUnicity::Locks).to receive(:unlock_job).and_call_original
+      allow(lock_manager).to receive(:unlock_job).and_call_original
     end
 
-    subject { lock_instance.with_server_lock(job) { 'processed' } }
+    let(:lock_manager) { SidekiqUnicity::Locks::Manager.new(Sidekiq.redis_pool) }
+
+    subject { lock_instance.with_server_lock(job, lock_manager) { 'processed' } }
 
     let(:job) do
       {
@@ -87,7 +90,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
     context 'without before_processing lock info' do
       it 'tries to unlock without failing' do
         expect(subject).to be true
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
+        expect(lock_manager).to have_received(:unlock_job).once
       end
     end
 
@@ -105,33 +108,32 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
 
       it 'tries to unlock without failing' do
         expect(subject).to be true
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
+        expect(lock_manager).to have_received(:unlock_job).once
       end
     end
 
     context 'with valid before_processing lock info' do
-      before { lock_instance.with_client_lock(job) {} }
+      before { lock_instance.with_client_lock(job, lock_manager) {} }
 
       it 'unlocks the job' do
         expect(job).to have_key(SidekiqUnicity::JOB_KWARG_NAME)
         expect(subject).to be true
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
-        puts job
-        expect(SidekiqUnicity.lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME]['resource'])).to be false
+        expect(lock_manager).to have_received(:unlock_job).once
+        expect(lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME]['resource'])).to be false
       end
     end
 
     context 'when the same job is already locked for processing' do
       before do
-        lock_instance.with_client_lock(job) {}
-        SidekiqUnicity.lock_manager.lock(lock_instance.send(:build_lock_key, 'during_bd', job), 300000)
+        lock_instance.with_client_lock(job, lock_manager) {}
+        lock_manager.lock(lock_instance.send(:build_lock_key, 'during_bd', job), 300000)
       end
 
       it 'unlocks the job for "before processing" but rejects it for processing' do
         expect(job).to have_key(SidekiqUnicity::JOB_KWARG_NAME)
         expect(subject).to be false
-        expect(SidekiqUnicity::Locks).to have_received(:unlock_job).once
-        expect(SidekiqUnicity.lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME]['resource'])).to be false
+        expect(lock_manager).to have_received(:unlock_job).once
+        expect(lock_manager.locked?(job[SidekiqUnicity::JOB_KWARG_NAME]['resource'])).to be false
       end
     end
   end

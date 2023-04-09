@@ -16,10 +16,10 @@ module SidekiqUnicity
       def for_client? = true
       def for_server? = true
 
-      def with_client_lock(job)
+      def with_client_lock(job, lock_manager)
         key = build_lock_key('before_bd', job)
 
-        if Locks.lock_job_from_client!(job, key, @client_lock_ttl)
+        if lock_manager.lock_job_from_client!(job, key, @client_lock_ttl)
           yield
         else
           @client_conflict_strategy.call(job, key)
@@ -27,11 +27,11 @@ module SidekiqUnicity
         end
       end
 
-      def with_server_lock(job)
+      def with_server_lock(job, lock_manager)
         key = build_lock_key('during_bd', job)
 
-        Locks.with_lock(key, @server_lock_ttl) do |processing_locked|
-          Locks.unlock_job(job)
+        lock_manager.with_lock(key, @server_lock_ttl) do |processing_locked|
+          lock_manager.unlock_job(job)
 
           if processing_locked
             yield

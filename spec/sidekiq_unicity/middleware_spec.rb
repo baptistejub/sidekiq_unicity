@@ -16,7 +16,10 @@ RSpec.describe SidekiqUnicity::Middleware do
   end
 
   shared_examples 'middleware behavior' do
-    before { allow(middleware_instance).to receive(:with_lock).and_call_original }
+    before do
+      allow(middleware_instance).to receive(:with_lock).and_call_original
+      allow(middleware_instance).to receive(:redis_pool).and_return(Sidekiq.redis_pool)
+    end
 
     subject { middleware_instance.call(nil, { 'class' => klass }, 'default_queue', *args) { 'yield' } }
 

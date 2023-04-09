@@ -3,9 +3,10 @@ RSpec.describe SidekiqUnicity::Locks::DuringProcessing do
 
   let(:conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
   let(:lock_instance) { described_class.new(lock_key_proc: ->(args) { args.first }, lock_ttl: 300000, conflict_strategy:) }
+  let(:lock_manager) { SidekiqUnicity::Locks::Manager.new(Sidekiq.redis_pool) }
 
   describe '#with_server_lock' do
-    subject { lock_instance.with_server_lock(job) {} }
+    subject { lock_instance.with_server_lock(job, lock_manager) {} }
 
     let(:job) do
       {
@@ -20,13 +21,13 @@ RSpec.describe SidekiqUnicity::Locks::DuringProcessing do
     context 'with an unlocked job' do
       it 'locks and unlocks' do
         expect(subject).to be true
-        expect(lock_instance.with_server_lock(job) {}).to be true
+        expect(lock_instance.with_server_lock(job, lock_manager) {}).to be true
       end
     end
 
     context 'with a locked job' do
       before do
-        SidekiqUnicity.lock_manager.lock(lock_instance.send(:build_lock_key, 'during', job), 300000)
+        lock_manager.lock(lock_instance.send(:build_lock_key, 'during', job), 300000)
       end
 
       it 'skips the same job' do
@@ -42,7 +43,7 @@ RSpec.describe SidekiqUnicity::Locks::DuringProcessing do
           "enqueued_at" => 1234567890
         }
 
-        expect(lock_instance.with_server_lock(other_job) {}).to be true
+        expect(lock_instance.with_server_lock(other_job, lock_manager) {}).to be true
       end
     end
   end

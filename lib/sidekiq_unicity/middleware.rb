@@ -1,3 +1,5 @@
+require_relative 'locks/manager'
+
 module SidekiqUnicity
   module Middleware
     module Base
@@ -11,6 +13,12 @@ module SidekiqUnicity
           end
         end
       end
+
+      private
+
+      def lock_manager
+        @lock_manager ||= SidekiqUnicity::Locks::Manager.new(redis_pool)
+      end
     end
 
     class ClientMiddleware
@@ -22,7 +30,7 @@ module SidekiqUnicity
       end
 
       def with_lock(lock, job, &)
-        lock.with_client_lock(job, &)
+        lock.with_client_lock(job, lock_manager, &)
       end
     end
 
@@ -35,7 +43,7 @@ module SidekiqUnicity
       end
 
       def with_lock(lock, job, &)
-        lock.with_server_lock(job, &)
+        lock.with_server_lock(job, lock_manager, &)
       end
     end
   end
