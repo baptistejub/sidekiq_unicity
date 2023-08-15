@@ -6,7 +6,7 @@ module SidekiqUnicity
       def call(_worker, job, queue, *_args)
         Object.const_get(job['class']).sidekiq_unicity_lock.then do |lock|
           # Checking excluded queue last to avoid unnecessary lookups
-          if apply_lock?(lock) && !SidekiqUnicity.config.excluded_queues&.include?(queue)
+          if lock && apply_lock?(lock) && !SidekiqUnicity.config.excluded_queues&.include?(queue)
             with_lock(lock, job) { yield }
           else
             yield

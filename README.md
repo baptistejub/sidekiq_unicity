@@ -110,7 +110,7 @@ Can be customized by using a Hash.
 Also accepts any object responding to `#call` (like a Proc) that takes 2 arguments:
   1. job: the standard Sidekiq job Hash
   2. lock_key: String
-Can be useful to customized behavior.
+Can be useful to customize behavior.
 
 ```ruby
 # Always raise on conflict

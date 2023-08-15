@@ -24,7 +24,7 @@ module SidekiqUnicity
 
         # Jobs are unique across (included) queues, including retry and scheduled job queues.
         # Moving a job between queues calls the client middleware stack, thus tries to acquire the lock.
-        # For a job already owning the lock, we can acquire a new lock, so we extend it instead
+        # For a job already owning the lock, we can't acquire a new lock, so we extend it instead
         # (to avoid deadlock or infinite loop).
         job[SidekiqUnicity::JOB_KWARG_NAME] = redlock.lock(
           key,

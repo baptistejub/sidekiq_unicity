@@ -9,35 +9,35 @@ GEM
   remote: https://rubygems.org/
   specs:
     concurrent-ruby (1.2.2)
-    connection_pool (2.3.0)
+    connection_pool (2.4.1)
     diff-lcs (1.5.0)
-    rack (3.0.4.1)
+    rack (3.0.8)
     rake (13.0.6)
-    redis-client (0.12.1)
+    redis-client (0.14.1)
       connection_pool
-    redlock (2.0.1)
-      redis-client
+    redlock (2.0.2)
+      redis-client (~> 0.14.1)
     rspec (3.12.0)
       rspec-core (~> 3.12.0)
       rspec-expectations (~> 3.12.0)
       rspec-mocks (~> 3.12.0)
-    rspec-core (3.12.1)
+    rspec-core (3.12.2)
       rspec-support (~> 3.12.0)
-    rspec-expectations (3.12.2)
+    rspec-expectations (3.12.3)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
-    rspec-mocks (3.12.3)
+    rspec-mocks (3.12.6)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
-    rspec-support (3.12.0)
-    sidekiq (7.0.3)
+    rspec-support (3.12.1)
+    sidekiq (7.1.2)
       concurrent-ruby (< 2)
       connection_pool (>= 2.3.0)
       rack (>= 2.2.4)
-      redis-client (>= 0.11.0)
+      redis-client (>= 0.14.0)
 
 PLATFORMS
-  x86_64-darwin-22
+  ruby
 
 DEPENDENCIES
   bundler (>= 2.0)
@@ -46,4 +46,4 @@ DEPENDENCIES
   sidekiq_unicity!
 
 BUNDLED WITH
-   2.4.8
+   2.4.18
