@@ -5,8 +5,9 @@ module SidekiqUnicity
     class BeforeAndDuringProcessing
       include KeyBuilder
 
-      def initialize(lock_key_proc:, client_lock_ttl:, server_lock_ttl:, client_conflict_strategy:, server_conflict_strategy:)
-        @lock_key_proc = lock_key_proc
+      def initialize(client_lock_key_proc:, server_lock_key_proc:, client_lock_ttl:, server_lock_ttl:, client_conflict_strategy:, server_conflict_strategy:)
+        @client_lock_key_proc = client_lock_key_proc
+        @server_lock_key_proc = server_lock_key_proc
         @client_lock_ttl = client_lock_ttl
         @client_conflict_strategy = client_conflict_strategy
         @server_lock_ttl = server_lock_ttl
@@ -17,7 +18,7 @@ module SidekiqUnicity
       def for_server? = true
 
       def with_client_lock(job, lock_manager)
-        key = build_lock_key('before_bd', job)
+        key = build_lock_key('before_bd', job, @client_lock_key_proc)
 
         if lock_manager.lock_job_from_client!(job, key, @client_lock_ttl)
           yield
@@ -28,7 +29,7 @@ module SidekiqUnicity
       end
 
       def with_server_lock(job, lock_manager)
-        key = build_lock_key('during_bd', job)
+        key = build_lock_key('during_bd', job, @server_lock_key_proc)
 
         lock_manager.with_lock(key, @server_lock_ttl) do |processing_locked|
           lock_manager.unlock_job(job)

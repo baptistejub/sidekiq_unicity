@@ -38,7 +38,7 @@ RSpec.describe SidekiqUnicity::Locks::UntilProcessed do
 
     context 'with another job lock key' do
       before do
-        other_job = job.dup.tap { _1['args'] = [2, 'arg', true ] }
+        other_job = job.dup.tap { _1['args'] = [2, 'arg', true] }
         lock_instance.with_client_lock(other_job, lock_manager) {}
       end
 

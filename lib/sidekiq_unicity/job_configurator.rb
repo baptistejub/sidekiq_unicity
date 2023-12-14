@@ -8,25 +8,23 @@ module SidekiqUnicity
     end
 
     def configure_lock
-      lock_key_proc = options.fetch(:lock_key_proc, nil)
-      raise ArgumentError, 'Invalid lock key proc' unless lock_key_proc.is_a?(Proc)
-
       case options.fetch(:lock).to_sym
       when :before_processing
         Locks::BeforeProcessing.new(
-          lock_key_proc:,
+          lock_key_proc: fetch_lock_key_proc(:before_processing),
           lock_ttl: fetch_lock_ttl(:before_processing),
           conflict_strategy: configure_conflict_strategy(:before_processing),
         )
       when :during_processing
         Locks::DuringProcessing.new(
-          lock_key_proc:,
+          lock_key_proc: fetch_lock_key_proc(:during_processing),
           lock_ttl: fetch_lock_ttl(:during_processing),
           conflict_strategy: configure_conflict_strategy(:during_processing)
         )
       when :before_and_during_processing
         Locks::BeforeAndDuringProcessing.new(
-          lock_key_proc:,
+          client_lock_key_proc: fetch_lock_key_proc(:before_processing),
+          server_lock_key_proc: fetch_lock_key_proc(:during_processing),
           client_lock_ttl: fetch_lock_ttl(:before_processing),
           server_lock_ttl: fetch_lock_ttl(:during_processing),
           client_conflict_strategy: configure_conflict_strategy(:before_processing),
@@ -34,7 +32,7 @@ module SidekiqUnicity
         )
       when :until_processed
         Locks::UntilProcessed.new(
-          lock_key_proc:,
+          lock_key_proc: fetch_lock_key_proc(:until_processed),
           lock_ttl: fetch_lock_ttl(:until_processed),
           conflict_strategy: configure_conflict_strategy(:until_processed)
         )
@@ -44,6 +42,19 @@ module SidekiqUnicity
     end
 
     private
+
+    # Possible formats:
+    #  - { lock_key_proc: ->(args) { ... } }
+    #  - { lock_key_proc: { before_processing: ->(args) { ... }, during_processing: ->(args) { ... } } }
+    def fetch_lock_key_proc(type)
+      lock_procs = options.fetch(:lock_key_proc, nil)
+
+      lock_proc = lock_procs.is_a?(Hash) ? lock_procs.fetch(type, config.default_lock_ttl) : lock_procs
+      raise ArgumentError, 'Missing lock key proc' unless lock_proc
+      raise ArgumentError, 'Invalid lock key proc' unless lock_proc.respond_to?(:call)
+
+      lock_proc
+    end
 
     # Possible formats:
     #  - { lock_ttl: 123 }

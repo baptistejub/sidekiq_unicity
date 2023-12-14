@@ -3,9 +3,11 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
 
   let(:client_conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
   let(:server_conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
+  let(:lock_key_proc) { ->(args) { args.first } }
   let(:lock_instance) do
     described_class.new(
-      lock_key_proc: ->(args) { args.first },
+      client_lock_key_proc: lock_key_proc,
+      server_lock_key_proc: lock_key_proc,
       client_lock_ttl: 300000,
       server_lock_ttl: 300000,
       client_conflict_strategy:,
@@ -126,7 +128,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
     context 'when the same job is already locked for processing' do
       before do
         lock_instance.with_client_lock(job, lock_manager) {}
-        lock_manager.lock(lock_instance.send(:build_lock_key, 'during_bd', job), 300000)
+        lock_manager.lock(lock_instance.send(:build_lock_key, 'during_bd', job, lock_key_proc), 300000)
       end
 
       it 'unlocks the job for "before processing" but rejects it for processing' do

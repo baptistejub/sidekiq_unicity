@@ -38,7 +38,7 @@ RSpec.describe SidekiqUnicity::JobConfigurator do
 
     context 'with empty options' do
       let(:options) { {} }
-      it { expect { lock_instance }.to raise_error(ArgumentError, /lock key proc/) }
+      it { expect { lock_instance }.to raise_error(KeyError, /:lock/) }
     end
 
     context 'with a missing lock key proc' do

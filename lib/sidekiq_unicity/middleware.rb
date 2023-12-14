@@ -26,7 +26,7 @@ module SidekiqUnicity
       include Base
 
       def apply_lock?(lock)
-        lock&.for_client?
+        lock.for_client?
       end
 
       def with_lock(lock, job, &)
@@ -39,7 +39,7 @@ module SidekiqUnicity
       include Base
 
       def apply_lock?(lock)
-        lock&.for_server?
+        lock.for_server?
       end
 
       def with_lock(lock, job, &)

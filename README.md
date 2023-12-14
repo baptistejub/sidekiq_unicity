@@ -79,7 +79,15 @@ end
 The lock strategy to use: `:before_processing`, `:during_processing` or `:before_and_during_processing`
 
 #### lock_key_proc (mandatory)
-Proc to generate a unique lock key for the job. Receives the job arguments.
+Proc (or any object responding to call) to generate a unique lock key for the job. Receives the job arguments.
+
+Can be set globally or customized by using a Hash (only pertinent for `:before_and_during_processing`).
+```ruby
+{ lock_key_proc: ->(args) { ... } }
+# or
+# useful to have distinct criteria depending of the job life cycle
+{ lock_key_proc: { before_processing: ->(args) { ... }, during_processing: ->(args) { ... } } }
+```
 
 #### lock_ttl
 Duration of the lock, to prevent deadlocks. After `lock_ttl`, the lock automatically expires and new jobs can be queued/processed.
