@@ -2,7 +2,7 @@ RSpec.describe SidekiqUnicity::Middleware do
   class TestMiddlewareLockJob
     include Sidekiq::Job
 
-    sidekiq_unicity_options lock: :before_processing, lock_key_proc: ->(_args) {}
+    sidekiq_unicity_options lock: :before_processing, lock_key_proc: ->(_job) {}
 
     def perform
     end

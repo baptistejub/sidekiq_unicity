@@ -3,7 +3,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeAndDuringProcessing do
 
   let(:client_conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
   let(:server_conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
-  let(:lock_key_proc) { ->(args) { args.first } }
+  let(:lock_key_proc) { ->(job) { job['args'].first } }
   let(:lock_instance) do
     described_class.new(
       client_lock_key_proc: lock_key_proc,

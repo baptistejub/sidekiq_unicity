@@ -2,7 +2,7 @@ RSpec.describe SidekiqUnicity::Locks::BeforeProcessing do
   before(:each) { SidekiqUnicity.manual_unlock }
 
   let(:conflict_strategy) { SidekiqUnicity::ConflictStrategies::Drop.new }
-  let(:lock_instance) { described_class.new(lock_key_proc: ->(args) { args.first }, lock_ttl: 300000, conflict_strategy:) }
+  let(:lock_instance) { described_class.new(lock_key_proc: ->(job) { job['args'].first }, lock_ttl: 300000, conflict_strategy:) }
   let(:lock_manager) { SidekiqUnicity::Locks::Manager.new(Sidekiq.redis_pool) }
 
   describe '#with_client_lock' do

@@ -47,7 +47,7 @@ class MyJob
   include Sidekiq::Job
 
   sidekiq_unicity_options lock: :before_processing,
-                          lock_key_proc: ->(args) { args.first }
+                          lock_key_proc: ->(job) { job['args'].first }
 
   def perform(args)
     # [...]
@@ -61,7 +61,7 @@ class MyJob
   include Sidekiq::Job
 
   sidekiq_unicity_options lock: :before_and_during_processing,
-                          lock_key_proc: ->(args) { args.first == 'book' ? args.second : 'global' },
+                          lock_key_proc: ->(job) { job['args'].first == 'book' ? jobs['args'].second : 'global' },
                           lock_ttl: { before_processing: 30, during_processing: 60 },
                           conflict_strategy: {
                             before_processing: :drop,
@@ -79,14 +79,15 @@ end
 The lock strategy to use: `:before_processing`, `:during_processing` or `:before_and_during_processing`
 
 #### lock_key_proc (mandatory)
-Proc (or any object responding to call) to generate a unique lock key for the job. Receives the job arguments.
+Proc (or any object responding to call) to generate a unique lock key for the job.
+Receives the [sidekiq job](https://github.com/sidekiq/sidekiq/wiki/Job-Format).
 
 Can be set globally or customized by using a Hash (only pertinent for `:before_and_during_processing`).
 ```ruby
-{ lock_key_proc: ->(args) { ... } }
+{ lock_key_proc: ->(job) { ... } }
 # or
 # useful to have distinct criteria depending of the job life cycle
-{ lock_key_proc: { before_processing: ->(args) { ... }, during_processing: ->(args) { ... } } }
+{ lock_key_proc: { before_processing: ->(job) { ... }, during_processing: ->(job) { ... } } }
 ```
 
 #### lock_ttl
