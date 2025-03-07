@@ -51,7 +51,9 @@ RSpec.describe SidekiqUnicity::Locks::Manager do
     end
 
     context 'when the lock is already acquired by he job' do
-      before { instance.lock_job_from_client!(job, key, 20000) }
+      let(:prev_ttl) { 20000 }
+
+      before { instance.lock_job_from_client!(job, key, prev_ttl) }
 
       it 'extends the lock' do
         previous_lock_info = job['lock_info']
@@ -59,6 +61,22 @@ RSpec.describe SidekiqUnicity::Locks::Manager do
         expect(job['lock_info']).to eq(subject)
         expect(previous_lock_info).not_to eq(subject)
         expect(instance.locked?(key)).to be true
+      end
+
+      context 'when the lock has expired' do
+        let(:prev_ttl) { 500 }
+
+        it 'acquires a new lock' do
+          sleep 1
+
+          expect(instance.locked?(key)).to be false
+
+          previous_lock_info = job['lock_info']
+          expect(subject).to be_a(Hash)
+          expect(job['lock_info']).to eq(subject)
+          expect(previous_lock_info).not_to eq(subject)
+          expect(instance.locked?(key)).to be true
+        end
       end
     end
   end
